@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ヘルスケア トラッカー - 健康管理アプリ</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Health Trends -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -32,170 +37,196 @@
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: #f8fafc;
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-        }
         .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
+            animation: fadeIn 0.25s ease-out;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 260px;
+        }
+        @media (min-width: 640px) {
+            .chart-container {
+                height: 320px;
+            }
+        }
     </style>
 </head>
-<body class="min-h-screen text-slate-800 flex flex-col justify-between antialiased">
+<body class="min-h-screen text-slate-800 flex flex-col justify-between antialiased selection:bg-emerald-100 selection:text-emerald-800">
 
-    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed top-4 right-4 left-4 sm:left-auto z-50 flex flex-col gap-2 pointer-events-none sm:max-w-xs"></div>
 
-    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
                     <i class="fa-solid fa-heart-pulse text-xl"></i>
                 </div>
-                <span class="font-bold text-xl tracking-tight text-slate-800">HealthLog</span>
+                <span class="font-bold text-lg sm:text-xl tracking-tight text-slate-800">HealthLog</span>
             </div>
             
-            <div id="user-profile-area" class="hidden items-center gap-3">
-                <img id="user-photo" class="w-9 h-9 rounded-full ring-2 ring-emerald-500/30 object-cover" src="" alt="ユーザー">
-                <span id="user-name" class="font-medium text-sm hidden sm:inline text-slate-700"></span>
-                <button id="logout-btn" class="text-xs sm:text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5 border border-slate-300">
+            <div id="user-profile-area" class="hidden items-center gap-2 sm:gap-3">
+                <img id="user-photo" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-emerald-500/30 object-cover" src="" alt="ユーザー">
+                <span id="user-name" class="font-medium text-xs sm:text-sm hidden sm:inline text-slate-700"></span>
+                <button id="logout-btn" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5 border border-slate-300">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                    <span>ログアウト</span>
+                    <span class="hidden sm:inline">ログアウト</span>
                 </button>
             </div>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-grow w-full">
-        <section id="login-screen" class="max-w-md mx-auto my-12 fade-in">
-            <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center space-y-6">
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-grow w-full">
+        <section id="login-screen" class="max-w-md mx-auto my-8 sm:my-16 fade-in">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-100 text-center space-y-6">
                 <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
                     <i class="fa-solid fa-notes-medical text-3xl"></i>
                 </div>
                 <div class="space-y-2">
-                    <h1 class="text-2xl font-bold text-slate-800">毎日の健康をきろくする</h1>
-                    <p class="text-slate-500 text-sm">Googleアカウントでログインして、体温や睡眠時間、体調の変化をスマートに管理しましょう。</p>
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">毎日の健康をきろくする</h1>
+                    <p class="text-slate-500 text-xs sm:text-sm leading-relaxed">Googleアカウントでログインして、体温や睡眠時間、体調の変化をグラフで可視化しましょう。</p>
                 </div>
 
-                <div class="pt-4">
-                    <button id="google-login-btn" class="w-full bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-4 rounded-xl border border-slate-300 shadow-sm flex items-center justify-center gap-3 transition-all transform active:scale-98">
+                <div class="pt-2">
+                    <button id="google-login-btn" class="w-full bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-4 rounded-xl border border-slate-300 shadow-sm flex items-center justify-center gap-3 transition-all transform active:scale-95">
                         <svg class="w-5 h-5" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                         </svg>
-                        <span>Googleでログイン</span>
+                        <span>Googleアカウントでログイン</span>
                     </button>
                 </div>
 
-                <div class="text-xs text-slate-400 pt-2">
-                    <p>安全なデータ保護のため、ログインが必要です。</p>
-                </div>
+                <p class="text-xs text-slate-400">ログインするとデータの保存やグラフの閲覧が可能です。</p>
             </div>
         </section>
 
-        <section id="app-screen" class="hidden space-y-8 fade-in">
+        <section id="app-screen" class="hidden space-y-6 sm:space-y-8 fade-in">
             <!-- Summary Dashboard Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div class="p-3 bg-red-50 text-red-500 rounded-lg">
-                        <i class="fa-solid fa-temperature-half text-xl"></i>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div class="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="p-2.5 bg-rose-50 text-rose-500 rounded-lg shrink-0">
+                        <i class="fa-solid fa-temperature-half text-lg sm:text-xl"></i>
                     </div>
-                    <div>
-                        <div class="text-xs text-slate-500 font-medium">平均体温</div>
-                        <div id="stat-temp" class="text-xl font-bold text-slate-800">-- <span class="text-xs font-normal">℃</span></div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div class="p-3 bg-indigo-50 text-indigo-500 rounded-lg">
-                        <i class="fa-solid fa-bed text-xl"></i>
-                    </div>
-                    <div>
-                        <div class="text-xs text-slate-500 font-medium">平均睡眠時間</div>
-                        <div id="stat-sleep" class="text-xl font-bold text-slate-800">-- <span class="text-xs font-normal">時間</span></div>
+                    <div class="min-w-0">
+                        <div class="text-[11px] sm:text-xs text-slate-500 font-medium truncate">平均体温</div>
+                        <div id="stat-temp" class="text-base sm:text-xl font-bold text-slate-800 truncate">-- <span class="text-xs font-normal">℃</span></div>
                     </div>
                 </div>
 
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div class="p-3 bg-emerald-50 text-emerald-500 rounded-lg">
-                        <i class="fa-solid fa-calendar-check text-xl"></i>
+                <div class="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="p-2.5 bg-indigo-50 text-indigo-500 rounded-lg shrink-0">
+                        <i class="fa-solid fa-bed text-lg sm:text-xl"></i>
                     </div>
-                    <div>
-                        <div class="text-xs text-slate-500 font-medium">総記録日数</div>
-                        <div id="stat-count" class="text-xl font-bold text-slate-800">0 <span class="text-xs font-normal">日</span></div>
+                    <div class="min-w-0">
+                        <div class="text-[11px] sm:text-xs text-slate-500 font-medium truncate">平均睡眠時間</div>
+                        <div id="stat-sleep" class="text-base sm:text-xl font-bold text-slate-800 truncate">-- <span class="text-xs font-normal">時間</span></div>
                     </div>
                 </div>
 
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div class="p-3 bg-amber-50 text-amber-500 rounded-lg">
-                        <i class="fa-solid fa-face-smile text-xl"></i>
+                <div class="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
+                        <i class="fa-solid fa-calendar-check text-lg sm:text-xl"></i>
                     </div>
-                    <div>
-                        <div class="text-xs text-slate-500 font-medium">直近の体調</div>
-                        <div id="stat-condition" class="text-sm font-bold text-slate-800">データなし</div>
+                    <div class="min-w-0">
+                        <div class="text-[11px] sm:text-xs text-slate-500 font-medium truncate">総記録日数</div>
+                        <div id="stat-count" class="text-base sm:text-xl font-bold text-slate-800 truncate">0 <span class="text-xs font-normal">日</span></div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="p-2.5 bg-amber-50 text-amber-500 rounded-lg shrink-0">
+                        <i class="fa-solid fa-face-smile text-lg sm:text-xl"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-[11px] sm:text-xs text-slate-500 font-medium truncate">直近の体調</div>
+                        <div id="stat-condition" class="text-xs sm:text-sm font-bold text-slate-800 truncate">データなし</div>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <!-- Record Entry Form -->
+            <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h2 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-emerald-600"></i>
+                        <span>体調・睡眠の推移グラフ</span>
+                    </h2>
+                    <span class="text-xs text-slate-400">最新30件の推移</span>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="healthChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Main Layout Grid (Form & List) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
+                
                 <div class="lg:col-span-5">
-                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5 sticky top-24">
+                    <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 sticky top-20">
                         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <h2 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
                                 <i class="fa-solid fa-pen-to-square text-emerald-600"></i>
-                                <span>本日の体調を入力</span>
+                                <span>健康状態を記録</span>
                             </h2>
                         </div>
 
-                        <form id="health-form" class="space-y-4">
+                        <form id="health-form" novalidate class="space-y-4">
                             <!-- 1. 日付 -->
                             <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">日付</label>
-                                <div class="relative">
-                                    <input type="date" id="input-date" required class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition">
-                                </div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                    日付 <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="date" id="input-date" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition">
+                                <p id="err-date" class="text-xs text-rose-500 mt-1 hidden"></p>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-2 gap-3 sm:gap-4">
                                 <!-- 2. 体温 -->
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">体温 (℃)</label>
-                                    <input type="number" id="input-temp" step="0.1" min="30.0" max="43.0" placeholder="36.5" required class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition">
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                        体温 (℃) <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="number" id="input-temp" step="0.1" min="33.0" max="43.0" placeholder="36.5" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition">
+                                    <p id="err-temp" class="text-xs text-rose-500 mt-1 hidden"></p>
                                 </div>
 
                                 <!-- 3. 睡眠時間 -->
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">睡眠時間 (時間)</label>
-                                    <input type="number" id="input-sleep" step="0.5" min="0" max="24" placeholder="7.5" required class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition">
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                        睡眠時間 (時間) <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="number" id="input-sleep" step="0.5" min="0" max="24" placeholder="7.5" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition">
+                                    <p id="err-sleep" class="text-xs text-rose-500 mt-1 hidden"></p>
                                 </div>
                             </div>
 
                             <!-- 4. 体調 -->
                             <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">体調</label>
-                                <select id="input-condition" required class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition bg-white">
-                                    <option value="絶好調">🌟 絶好調</option>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                    体調 <span class="text-rose-500">*</span>
+                                </label>
+                                <select id="input-condition" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition bg-white">
                                     <option value="良い" selected>😊 良い</option>
                                     <option value="ふつう">😐 ふつう</option>
                                     <option value="悪い">😟 悪い</option>
-                                    <option value="非常につらい">😫 非常につらい</option>
                                 </select>
+                                <p id="err-condition" class="text-xs text-rose-500 mt-1 hidden"></p>
                             </div>
 
                             <!-- 5. メモ -->
                             <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">メモ</label>
-                                <textarea id="input-memo" rows="3" placeholder="症状、服薬、運動や一日の感想など..." class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition resize-none"></textarea>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">メモ (任意)</label>
+                                <textarea id="input-memo" rows="3" placeholder="症状、服薬、一日の出来事など..." class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm outline-none transition resize-none"></textarea>
                             </div>
 
-                            <button type="submit" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition active:scale-98">
+                            <button type="submit" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition active:scale-95">
                                 <i class="fa-solid fa-plus-circle"></i>
                                 <span>記録を登録する</span>
                             </button>
@@ -203,18 +234,34 @@
                     </div>
                 </div>
 
-                <!-- History Display List -->
                 <div class="lg:col-span-7 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-clock-rotate-left text-emerald-600"></i>
-                            <span>記録一覧</span>
-                        </h2>
-                        <span id="record-count-badge" class="text-xs bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full font-medium">0件</span>
+                    <!-- Filters and Sort Controls -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-filter text-slate-400 text-xs"></i>
+                            <span class="text-xs font-semibold text-slate-600">絞り込み:</span>
+                            <select id="filter-condition" class="text-xs bg-slate-50 border border-slate-300 text-slate-700 font-medium py-1.5 px-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <option value="ALL">すべての体調</option>
+                                <option value="悪い">😟 「悪い」のみ</option>
+                                <option value="ふつう">😐 「ふつう」のみ</option>
+                                <option value="良い">😊 「良い」のみ</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center justify-between sm:justify-end gap-3">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-sort text-slate-400 text-xs"></i>
+                                <span class="text-xs font-semibold text-slate-600">並び順:</span>
+                                <select id="sort-order" class="text-xs bg-slate-50 border border-slate-300 text-slate-700 font-medium py-1.5 px-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                    <option value="DESC">新しい順</option>
+                                    <option value="ASC">古い順</option>
+                                </select>
+                            </div>
+                            <span id="record-count-badge" class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold">0件</span>
+                        </div>
                     </div>
 
                     <div id="records-list" class="space-y-3">
-                        <!-- Dynamic items loaded here -->
                         <div class="bg-white p-8 rounded-2xl text-center text-slate-400 border border-slate-200">
                             <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-emerald-500"></i>
                             <p class="text-sm">データを読み込んでいます...</p>
@@ -225,14 +272,10 @@
         </section>
     </main>
 
-    <footer class="bg-white border-t border-slate-200 py-6 text-center text-slate-400 text-xs">
-        <p>&copy; 2026 HealthLog App. All rights reserved.</p>
-    </footer>
-
     <div id="delete-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-slate-100 fade-in">
             <div class="text-center space-y-2">
-                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+                <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
                     <i class="fa-solid fa-trash-can text-xl"></i>
                 </div>
                 <h3 class="text-lg font-bold text-slate-800">記録を削除しますか？</h3>
@@ -240,7 +283,7 @@
             </div>
             <div class="flex gap-3">
                 <button id="cancel-delete-btn" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition">キャンセル</button>
-                <button id="confirm-delete-btn" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-red-600/20">削除する</button>
+                <button id="confirm-delete-btn" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-rose-600/20">削除する</button>
             </div>
         </div>
     </div>
@@ -273,7 +316,6 @@
             appId: "1:768284823178:web:7cf7598c5b02ec7c00e773"
         };
 
-        // App System Context
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'tuisi2-health-app';
 
         // Initialize Firebase
@@ -282,12 +324,14 @@
         const db = getFirestore(app);
         const googleProvider = new GoogleAuthProvider();
 
-        // State Variables
+        // Application State
         let currentUser = null;
         let unsubscribeRecords = null;
+        let rawRecords = [];
+        let healthChart = null;
         let targetDeleteId = null;
 
-        // UI Element References
+        // UI References
         const loginScreen = document.getElementById('login-screen');
         const appScreen = document.getElementById('app-screen');
         const userProfileArea = document.getElementById('user-profile-area');
@@ -295,28 +339,33 @@
         const userName = document.getElementById('user-name');
         const googleLoginBtn = document.getElementById('google-login-btn');
         const logoutBtn = document.getElementById('logout-btn');
+
         const healthForm = document.getElementById('health-form');
         const inputDate = document.getElementById('input-date');
         const inputTemp = document.getElementById('input-temp');
         const inputSleep = document.getElementById('input-sleep');
         const inputCondition = document.getElementById('input-condition');
         const inputMemo = document.getElementById('input-memo');
+
+        const filterCondition = document.getElementById('filter-condition');
+        const sortOrder = document.getElementById('sort-order');
         const recordsList = document.getElementById('records-list');
+
         const deleteModal = document.getElementById('delete-modal');
         const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 
-        // Set default date to today
+        // Initial Form Setup
         inputDate.value = new Date().toISOString().split('T')[0];
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            const bgClass = type === 'success' ? 'bg-slate-800 text-white' : 'bg-red-600 text-white';
-            const icon = type === 'success' ? 'fa-check-circle text-emerald-400' : 'fa-triangle-exclamation';
+            const bgClass = type === 'success' ? 'bg-slate-800 text-white' : 'bg-rose-600 text-white';
+            const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-triangle-exclamation';
 
-            toast.className = `${bgClass} pointer-events-auto px-4 py-3 rounded-xl shadow-xl text-sm flex items-center gap-2 fade-in`;
-            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            toast.className = `${bgClass} pointer-events-auto px-4 py-3 rounded-xl shadow-xl text-xs sm:text-sm flex items-center gap-2.5 fade-in`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i> <span class="font-medium">${message}</span>`;
             
             container.appendChild(toast);
             setTimeout(() => {
@@ -336,7 +385,6 @@
                 userProfileArea.classList.remove('hidden');
                 userProfileArea.classList.add('flex');
 
-                // Start listening to records
                 subscribeToRecords(user.uid);
             } else {
                 currentUser = null;
@@ -349,7 +397,7 @@
             }
         });
 
-        // Google Login Button
+        // Authentication Handlers
         googleLoginBtn.addEventListener('click', async () => {
             try {
                 await signInWithPopup(auth, googleProvider);
@@ -360,7 +408,6 @@
             }
         });
 
-        // Logout Button
         logoutBtn.addEventListener('click', async () => {
             try {
                 await signOut(auth);
@@ -371,7 +418,6 @@
         });
 
         function getRecordsCollectionRef(uid) {
-            // Using standard artifacts scope fallback for cross-environment stability
             return collection(db, 'artifacts', appId, 'users', uid, 'records');
         }
 
@@ -379,75 +425,94 @@
             const recordsRef = getRecordsCollectionRef(uid);
 
             unsubscribeRecords = onSnapshot(recordsRef, (snapshot) => {
-                const records = [];
+                rawRecords = [];
                 snapshot.forEach((doc) => {
-                    records.push({ id: doc.id, ...doc.data() });
+                    rawRecords.push({ id: doc.id, ...doc.data() });
                 });
 
-                // Rule 2: Sort descending in JS memory by date
-                records.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                renderRecords(records);
-                updateStats(records);
+                applyFiltersAndRender();
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
                 showToast('データの読み込みに失敗しました', 'error');
             });
         }
 
+        function applyFiltersAndRender() {
+            let processed = [...rawRecords];
+
+            // 1. Filter by condition
+            const selectedCondition = filterCondition.value;
+            if (selectedCondition !== 'ALL') {
+                processed = processed.filter(r => r.condition === selectedCondition);
+            }
+
+            // 2. Sort by date
+            const isDesc = sortOrder.value === 'DESC';
+            processed.sort((a, b) => {
+                const dateA = new Date(a.date).getTime();
+                const dateB = new Date(b.date).getTime();
+                return isDesc ? dateB - dateA : dateA - dateB;
+            });
+
+            renderRecords(processed);
+            updateStats(rawRecords);
+            renderChart(rawRecords);
+        }
+
+        filterCondition.addEventListener('change', applyFiltersAndRender);
+        sortOrder.addEventListener('change', applyFiltersAndRender);
+
         function renderRecords(records) {
             document.getElementById('record-count-badge').textContent = `${records.length}件`;
 
             if (records.length === 0) {
                 recordsList.innerHTML = `
-                    <div class="bg-white p-8 rounded-2xl text-center text-slate-400 border border-slate-200">
-                        <i class="fa-solid fa-notes-medical text-3xl mb-2 text-slate-300"></i>
-                        <p class="text-sm">まだ記録がありません。左のフォームから入力してください。</p>
+                    <div class="bg-white p-8 rounded-2xl text-center text-slate-400 border border-slate-200 space-y-2">
+                        <i class="fa-solid fa-folder-open text-3xl text-slate-300"></i>
+                        <p class="text-sm">該当する記録が見つかりません。</p>
                     </div>
                 `;
                 return;
             }
 
-            recordsList.innerHTML = records.map((record) => {
-                const conditionStyles = {
-                    '絶好調': { badge: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: '🌟' },
-                    '良い': { badge: 'bg-teal-100 text-teal-800 border-teal-200', icon: '😊' },
-                    'ふつう': { badge: 'bg-blue-100 text-blue-800 border-blue-200', icon: '😐' },
-                    '悪い': { badge: 'bg-amber-100 text-amber-800 border-amber-200', icon: '😟' },
-                    '非常につらい': { badge: 'bg-rose-100 text-rose-800 border-rose-200', icon: '😫' }
-                };
+            const conditionStyles = {
+                '良い': { badge: 'bg-teal-50 text-teal-700 border-teal-200', icon: '😊' },
+                'ふつう': { badge: 'bg-blue-50 text-blue-700 border-blue-200', icon: '😐' },
+                '悪い': { badge: 'bg-rose-50 text-rose-700 border-rose-200 font-semibold', icon: '😟' }
+            };
 
+            recordsList.innerHTML = records.map((record) => {
                 const style = conditionStyles[record.condition] || { badge: 'bg-slate-100 text-slate-800 border-slate-200', icon: '❓' };
 
                 return `
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm transition hover:shadow-md space-y-3 relative group">
+                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm transition hover:shadow-md space-y-3 relative group">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <span class="font-bold text-slate-800 text-base">${record.date}</span>
-                                <span class="text-xs px-2.5 py-1 rounded-full border font-medium ${style.badge}">
+                                <span class="font-bold text-slate-800 text-sm sm:text-base">${record.date}</span>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full border font-medium ${style.badge}">
                                     ${style.icon} ${record.condition}
                                 </span>
                             </div>
-                            <button onclick="window.openDeleteModal('${record.id}')" class="text-slate-400 hover:text-red-500 p-1.5 rounded-lg transition opacity-80 group-hover:opacity-100">
-                                <i class="fa-solid fa-trash-can"></i>
+                            <button onclick="window.openDeleteModal('${record.id}')" class="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg transition opacity-80 group-hover:opacity-100">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
                             </button>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2 text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        <div class="grid grid-cols-2 gap-2 text-xs sm:text-sm bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-100">
                             <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-temperature-half text-red-500 w-4"></i>
+                                <i class="fa-solid fa-temperature-half text-rose-500 w-4 text-center"></i>
                                 <span class="text-slate-500 text-xs">体温:</span>
-                                <span class="font-semibold text-slate-700">${Number(record.temp).toFixed(1)} ℃</span>
+                                <span class="font-semibold text-slate-800">${Number(record.temp).toFixed(1)} ℃</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-bed text-indigo-500 w-4"></i>
+                                <i class="fa-solid fa-bed text-indigo-500 w-4 text-center"></i>
                                 <span class="text-slate-500 text-xs">睡眠:</span>
-                                <span class="font-semibold text-slate-700">${Number(record.sleep).toFixed(1)} 時間</span>
+                                <span class="font-semibold text-slate-800">${Number(record.sleep).toFixed(1)} 時間</span>
                             </div>
                         </div>
 
                         ${record.memo ? `
-                            <p class="text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-100 whitespace-pre-wrap leading-relaxed">
+                            <p class="text-xs text-slate-600 bg-white p-2.5 rounded-xl border border-slate-100 whitespace-pre-wrap leading-relaxed">
                                 <i class="fa-solid fa-quote-left text-slate-300 mr-1"></i>${record.memo}
                             </p>
                         ` : ''}
@@ -471,15 +536,172 @@
             const avgTemp = (totalTemp / records.length).toFixed(1);
             const avgSleep = (totalSleep / records.length).toFixed(1);
 
+            // Sort by date desc to get latest condition
+            const latestRecord = [...records].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
             document.getElementById('stat-temp').innerHTML = `${avgTemp} <span class="text-xs font-normal">℃</span>`;
             document.getElementById('stat-sleep').innerHTML = `${avgSleep} <span class="text-xs font-normal">時間</span>`;
             document.getElementById('stat-count').innerHTML = `${records.length} <span class="text-xs font-normal">日</span>`;
-            document.getElementById('stat-condition').textContent = `${records[0].condition}`;
+            document.getElementById('stat-condition').textContent = latestRecord ? latestRecord.condition : 'データなし';
         }
 
+        function renderChart(records) {
+            const ctx = document.getElementById('healthChart').getContext('2d');
+            
+            // Sort ascending for chronological trend visualization
+            const sorted = [...records].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-30);
+
+            const labels = sorted.map(r => r.date.slice(5)); // MM-DD
+            const tempData = sorted.map(r => r.temp);
+            const sleepData = sorted.map(r => r.sleep);
+
+            if (healthChart) {
+                healthChart.destroy();
+            }
+
+            healthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '体温 (℃)',
+                            data: tempData,
+                            borderColor: '#f43f5e',
+                            backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'yTemp',
+                            pointBackgroundColor: '#f43f5e',
+                            pointRadius: 3
+                        },
+                        {
+                            label: '睡眠時間 (時間)',
+                            data: sleepData,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'ySleep',
+                            pointBackgroundColor: '#6366f1',
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 11 }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 } }
+                        },
+                        yTemp: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: '体温 (℃)', font: { size: 10 } },
+                            min: 35.0,
+                            max: 40.0,
+                            ticks: { font: { size: 10 } }
+                        },
+                        ySleep: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: '睡眠 (h)', font: { size: 10 } },
+                            min: 0,
+                            max: 15,
+                            grid: { drawOnChartArea: false },
+                            ticks: { font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function clearErrors() {
+            ['date', 'temp', 'sleep', 'condition'].forEach(field => {
+                const input = document.getElementById(`input-${field}`);
+                const err = document.getElementById(`err-${field}`);
+                if (input) input.classList.remove('border-rose-500', 'focus:ring-rose-500');
+                if (err) {
+                    err.textContent = '';
+                    err.classList.add('hidden');
+                }
+            });
+        }
+
+        function showError(field, message) {
+            const input = document.getElementById(`input-${field}`);
+            const err = document.getElementById(`err-${field}`);
+            if (input) input.classList.add('border-rose-500', 'focus:ring-rose-500');
+            if (err) {
+                err.textContent = message;
+                err.classList.remove('hidden');
+            }
+        }
+
+        function validateForm() {
+            clearErrors();
+            let isValid = true;
+
+            const dateVal = inputDate.value;
+            const tempVal = parseFloat(inputTemp.value);
+            const sleepVal = parseFloat(inputSleep.value);
+            const conditionVal = inputCondition.value;
+
+            if (!dateVal) {
+                showError('date', '日付を選択してください。');
+                isValid = false;
+            }
+
+            if (isNaN(tempVal)) {
+                showError('temp', '体温を数値で入力してください。');
+                isValid = false;
+            } else if (tempVal < 33.0 || tempVal > 43.0) {
+                showError('temp', '体温は33.0℃〜43.0℃の範囲で指定してください。');
+                isValid = false;
+            }
+
+            if (isNaN(sleepVal)) {
+                showError('sleep', '睡眠時間を数値で入力してください。');
+                isValid = false;
+            } else if (sleepVal < 0 || sleepVal > 24) {
+                showError('sleep', '睡眠時間は0〜24時間の範囲で指定してください。');
+                isValid = false;
+            }
+
+            if (!conditionVal) {
+                showError('condition', '体調を選択してください。');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        // Submit Form Handler
         healthForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentUser) return;
+
+            if (!validateForm()) {
+                showToast('入力内容を確認してください', 'error');
+                return;
+            }
 
             const newRecord = {
                 date: inputDate.value,
@@ -494,7 +716,7 @@
                 const recordsRef = getRecordsCollectionRef(currentUser.uid);
                 await addDoc(recordsRef, newRecord);
 
-                showToast('健康記録を保存しました！');
+                showToast('健康記録を登録しました！');
                 
                 // Reset optional fields
                 inputTemp.value = '';
@@ -502,9 +724,10 @@
                 inputMemo.value = '';
                 inputCondition.value = '良い';
                 inputDate.value = new Date().toISOString().split('T')[0];
+                clearErrors();
             } catch (error) {
                 console.error("Error adding record:", error);
-                showToast('保存に失敗しました', 'error');
+                showToast('記録の保存に失敗しました', 'error');
             }
         });
 
